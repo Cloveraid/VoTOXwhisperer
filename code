@@ -1,0 +1,93 @@
+import re
+from jamo import h2j, j2hcj
+
+# EW WordBuilder Votox 기본 알파벳 맵
+EN_VOTOX = {
+    # Vowels & Diphthongs
+    'a': 'A', 'e': 'e', 'i': 'E', 'o': 'o', 'u': 'U', 'ai': 'aE', 'au': 'uO',
+    'ei': 'iE', 'oi': 'oE', 'ou': 'oO',
+    # Consonants
+    'b': 'b', 'c': 'K', 'd': 'd', 'f': 'F', 'g': 'g', 'h': 'H', 'j': 'j',
+    'k': 'K', 'l': 'l', 'm': 'm', 'n': 'n', 'p': 'P', 'q': 'Q', 'r': 'r',
+    's': 'S', 't': 'T', 'v': 'v', 'w': 'w', 'x': 'X', 'y': 'y', 'z': 'z',
+    # Digraphs & Others
+    'ch': 'C!', 'ng': 'ng', 'sh': 'S!', 'th': 'T!', 'zh': 'zj'
+}
+
+# 한글 자모음→영어 발음 유사치환→VOTOX 매핑
+# 초성/중성/종성별 대응
+HANGUL_TO_ENG = {
+    '초성': {
+        'ㄱ': 'g', 'ㄲ': 'K', 'ㄴ': 'n', 'ㄷ': 'd', 'ㄸ': 'T', 'ㄹ': 'r',
+        'ㅁ': 'm', 'ㅂ': 'b', 'ㅃ': 'P', 'ㅅ': 'S', 'ㅆ': 'S', 'ㅇ': '', 'ㅈ': 'j',
+        'ㅉ': 'j', 'ㅊ': 'C!', 'ㅋ': 'K', 'ㅌ': 'T', 'ㅍ': 'P', 'ㅎ': 'H'
+    },
+    '중성': {
+        'ㅏ': 'A', 'ㅐ': 'e', 'ㅑ': 'A', 'ㅒ': 'e', 'ㅓ': 'A', 'ㅔ': 'e',
+        'ㅕ': 'A', 'ㅖ': 'e', 'ㅗ': 'o', 'ㅛ': 'o', 'ㅜ': 'U', 'ㅠ': 'U',
+        'ㅡ': 'U', 'ㅣ': 'E', 'ㅚ': 'oE', 'ㅟ': 'U', 'ㅝ': 'oA', 'ㅙ': 'oE', 'ㅞ': 'oE'
+    },
+    '종성': {
+        '': '', 'ㄱ': 'g', 'ㄲ': 'K', 'ㄳ': 'gs', 'ㄴ': 'n', 'ㄵ': 'nj', 'ㄶ': 'nH',
+        'ㄷ': 'd', 'ㄹ': 'l', 'ㄺ': 'lg', 'ㄻ': 'lm', 'ㄼ': 'lb', 'ㄽ': 'lS', 'ㄾ': 'lT',
+        'ㄿ': 'lP', 'ㅀ': 'lH', 'ㅁ': 'm', 'ㅂ': 'b', 'ㅄ': 'bS', 'ㅅ': 'S', 'ㅆ': 'S',
+        'ㅇ': 'ng', 'ㅈ': 'j', 'ㅊ': 'C!', 'ㅋ': 'K', 'ㅌ': 'T', 'ㅍ': 'P', 'ㅎ': 'H'
+    }
+}
+
+def hangul_to_votox(text):
+    초성_list = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'
+    중성_list = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ',
+                'ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ']
+    종성_list = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ',
+                 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+    result = []
+    for ch in text:
+        if re.match('[가-힣]', ch):
+            code = ord(ch) - 0xAC00
+            cho = code // (21 * 28)
+            jung = (code % (21 * 28)) // 28
+            jong = code % 28
+            c = 초성_list[cho]
+            v = 중성_list[jung]
+            f = 종성_list[jong]
+            e_c = HANGUL_TO_ENG['초성'].get(c, '')
+            e_v = HANGUL_TO_ENG['중성'].get(v, '')
+            e_f = HANGUL_TO_ENG['종성'].get(f, '')
+            r = (EN_VOTOX.get(e_c, e_c) +
+                 EN_VOTOX.get(e_v, e_v) +
+                 EN_VOTOX.get(e_f, e_f))
+            result.append(r)
+        else:
+            result.append(ch)
+    return ' '.join(result)
+
+
+
+def eng_to_votox(text):
+    # 간단한 예시, 실제로는 철자별 규칙 적용 필요
+    text = text.lower()
+    result = []
+    i = 0
+    while i < len(text):
+        # ch, sh, ng, th, zh 우선
+        if i + 1 < len(text):
+            pair = text[i:i+2]
+            if pair in EN_VOTOX:
+                result.append(EN_VOTOX[pair])
+                i += 2
+                continue
+        ch = text[i]
+        result.append(EN_VOTOX.get(ch, ch))
+        i += 1
+    return ' '.join(result)
+
+def main():
+    text = input("한글 또는 영어 입력: ")
+    if re.search('[가-힣]', text):
+        print("Votox 변환:", hangul_to_votox(text))
+    else:
+        print("Votox 변환:", eng_to_votox(text))
+
+if __name__ == '__main__':
+    main()
